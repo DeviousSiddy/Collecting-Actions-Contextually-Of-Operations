@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('path');
 const SizePlugin = require('size-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
@@ -22,6 +23,12 @@ const common = {
     all: false,
     errors: true,
     builtAt: true,
+  },
+  resolve: {
+    fallback: {
+      os: require.resolve('os-browserify/browser'), // Polyfill for `os`
+      path: require.resolve('path-browserify'), // Polyfill for `path`
+    },
   },
   module: {
     rules: [

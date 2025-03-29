@@ -35,12 +35,51 @@ import './popup.css';
       updateCounter({
         type: 'INCREMENT',
       });
+
+      chrome.runtime.sendMessage(
+        {
+          type: 'COUNT',
+          payload: { count: 1 },
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('Error:', chrome.runtime.lastError.message);
+          } else {
+            console.log('Response from background:', response.message);
+          }
+        }
+      );
     });
 
     document.getElementById('decrementBtn').addEventListener('click', () => {
       updateCounter({
         type: 'DECREMENT',
       });
+    });
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      const inputText = document.getElementById('inputText').value;
+
+      chrome.runtime.sendMessage(
+        {
+          type: 'START',
+          payload: { inputText },
+        },
+        (response) => {
+          console.log(response.message);
+        }
+      );
+    });
+
+    document.getElementById('stopBtn').addEventListener('click', () => {
+      chrome.runtime.sendMessage(
+        {
+          type: 'STOP',
+        },
+        (response) => {
+          console.log(response.message);
+        }
+      );
     });
   }
 
@@ -49,7 +88,7 @@ import './popup.css';
       let newCount;
 
       if (type === 'INCREMENT') {
-        newCount = count + 1;
+        newCount = count + 2;
       } else if (type === 'DECREMENT') {
         newCount = count - 1;
       } else {

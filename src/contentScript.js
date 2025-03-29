@@ -25,8 +25,12 @@ chrome.runtime.sendMessage(
       message: 'Hello, my name is Con. I am from ContentScript.',
     },
   },
-  response => {
-    console.log(response.message);
+  (response) => {
+    if (chrome.runtime.lastError) {
+      console.error('Error:', chrome.runtime.lastError.message);
+    } else {
+      console.log('Response from background:', response.message);
+    }
   }
 );
 
@@ -41,3 +45,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   sendResponse({});
   return true;
 });
+
+(function () {
+  const originalMethods = {};
+
+  // Wrap methods to track their execution
+  ['log', 'warn', 'error'].forEach((method) => {
+    originalMethods[method] = console[method];
+    console[method] = function (...args) {
+      chrome.runtime.sendMessage({
+        type: 'LOG_METHOD',
+        payload: { methodName: `console.${method}` },
+      });
+      originalMethods[method].apply(console, args);
+    };
+  });
+})();
