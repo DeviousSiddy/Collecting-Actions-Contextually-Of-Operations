@@ -16,4 +16,5 @@ module.exports = merge(common, {
     path: PATHS.build, // Output to the `build` folder
     filename: '[name].js', // Output files named based on entry keys
   },
+  devtool: 'source-map', // Enable source maps
 });

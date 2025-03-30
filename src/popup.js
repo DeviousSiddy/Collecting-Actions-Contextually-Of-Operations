@@ -2,150 +2,64 @@
 
 import './popup.css';
 
-(function() {
-  // We will make use of Storage API to get and store `count` value
-  // More information on Storage API can we found at
-  // https://developer.chrome.com/extensions/storage
+document.addEventListener('DOMContentLoaded', () => {
+  const startButton = document.getElementById('startButton');
+  const stopButton = document.getElementById('stopButton');
+  const inputTextField = document.getElementById('inputText');
+  const statusText = document.getElementById('statusText');
 
-  // To get storage access, we have to mention it in `permissions` property of manifest.json file
-  // More information on Permissions can we found at
-  // https://developer.chrome.com/extensions/declare_permissions
-  const counterStorage = {
-    get: cb => {
-      chrome.storage.sync.get(['count'], result => {
-        cb(result.count);
-      });
-    },
-    set: (value, cb) => {
-      chrome.storage.sync.set(
-        {
-          count: value,
-        },
-        () => {
-          cb();
-        }
-      );
-    },
-  };
-
-  function setupCounter(initialValue = 0) {
-    document.getElementById('counter').innerHTML = initialValue;
-
-    document.getElementById('incrementBtn').addEventListener('click', () => {
-      updateCounter({
-        type: 'INCREMENT',
-      });
-
-      chrome.runtime.sendMessage(
-        {
-          type: 'COUNT',
-          payload: { count: 1 },
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            console.error('Error:', chrome.runtime.lastError.message);
-          } else {
-            console.log('Response from background:', response.message);
-          }
-        }
-      );
-    });
-
-    document.getElementById('decrementBtn').addEventListener('click', () => {
-      updateCounter({
-        type: 'DECREMENT',
-      });
-    });
-
-    document.getElementById('startBtn').addEventListener('click', () => {
-      const inputText = document.getElementById('inputText').value;
-
-      chrome.runtime.sendMessage(
-        {
-          type: 'START',
-          payload: { inputText },
-        },
-        (response) => {
-          console.log(response.message);
-        }
-      );
-    });
-
-    document.getElementById('stopBtn').addEventListener('click', () => {
-      chrome.runtime.sendMessage(
-        {
-          type: 'STOP',
-        },
-        (response) => {
-          console.log(response.message);
-        }
-      );
-    });
-  }
-
-  function updateCounter({ type }) {
-    counterStorage.get(count => {
-      let newCount;
-
-      if (type === 'INCREMENT') {
-        newCount = count + 2;
-      } else if (type === 'DECREMENT') {
-        newCount = count - 1;
-      } else {
-        newCount = count;
-      }
-
-      counterStorage.set(newCount, () => {
-        document.getElementById('counter').innerHTML = newCount;
-
-        // Communicate with content script of
-        // active tab by sending a message
-        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-          const tab = tabs[0];
-
-          chrome.tabs.sendMessage(
-            tab.id,
-            {
-              type: 'COUNT',
-              payload: {
-                count: newCount,
-              },
-            },
-            response => {
-              console.log('Current count value passed to contentScript file');
-            }
-          );
-        });
-      });
-    });
-  }
-
-  function restoreCounter() {
-    // Restore count value
-    counterStorage.get(count => {
-      if (typeof count === 'undefined') {
-        // Set counter value as 0
-        counterStorage.set(0, () => {
-          setupCounter(0);
-        });
-      } else {
-        setupCounter(count);
-      }
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', restoreCounter);
-
-  // Communicate with background file by sending a message
-  chrome.runtime.sendMessage(
-    {
-      type: 'GREETINGS',
-      payload: {
-        message: 'Hello, my name is Pop. I am from Popup.',
-      },
-    },
-    response => {
-      console.log(response.message);
+  // Initialize the popup state
+  chrome.storage.local.get(['tracking', 'inputText'], (data) => {
+    if (data.tracking) {
+      statusText.textContent = 'Status: Started';
+      startButton.disabled = true;
+      stopButton.disabled = false;
+      inputTextField.value = data.inputText || '';
+      inputTextField.readOnly = true;
+    } else {
+      statusText.textContent = 'Status: Stopped';
+      startButton.disabled = false;
+      stopButton.disabled = true;
+      inputTextField.value = data.inputText || '';
+      inputTextField.readOnly = false;
     }
-  );
-})();
+  });
+
+  // Start button click handler
+  startButton.addEventListener('click', () => {
+    const inputText = inputTextField.value.trim();
+    if (!inputText) {
+      alert('Please enter some text before starting.');
+      return;
+    }
+
+    chrome.runtime.sendMessage({ type: 'START', payload: { inputText } }, (response) => {
+      if (response && response.message === 'Tracking started!') {
+        statusText.textContent = 'Status: Started';
+        startButton.disabled = true;
+        stopButton.disabled = false;
+        inputTextField.readOnly = true;
+
+        chrome.storage.local.set({ tracking: true, inputText });
+      } else {
+        console.error('Failed to start tracking:', response);
+      }
+    });
+  });
+
+  // Stop button click handler
+  stopButton.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'STOP' }, (response) => {
+      if (response && response.message === 'Tracking stopped!') {
+        statusText.textContent = 'Status: Stopped';
+        startButton.disabled = false;
+        stopButton.disabled = true;
+        inputTextField.readOnly = false;
+
+        chrome.storage.local.set({ tracking: false });
+      } else {
+        console.error('Failed to stop tracking:', response);
+      }
+    });
+  });
+});

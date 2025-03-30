@@ -21,10 +21,12 @@
   </div>-->
 
   <div class="app">
-    <input id="inputText" type="text" placeholder="Enter text here" />
-    <hr class="divider" />
-    <button id="startBtn" class="button">Start</button>
-    <button id="stopBtn" class="button">Stop</button>
+    <div>
+      <input type="text" id="inputText" placeholder="Enter text" />
+      <button id="startButton">Start</button>
+      <button id="stopButton" disabled>Stop</button>
+      <p id="statusText">Status: Stopped</p> <!-- Status text -->
+    </div>
   </div>
 
   <script src="popup.js"></script>

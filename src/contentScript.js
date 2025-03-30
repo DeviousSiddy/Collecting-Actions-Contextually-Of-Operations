@@ -1,63 +1,56 @@
-'use strict';
+(() => {
+  let currentSessionId = null;
+  let trackingClicks = false;
 
-// Content script file will run in the context of web page.
-// With content script you can manipulate the web pages using
-// Document Object Model (DOM).
-// You can also pass information to the parent extension.
+  function handleClick(event) {
+    if (!trackingClicks) return;
 
-// We execute this script by making an entry in manifest.json file
-// under `content_scripts` property
+    const clickedElement = event.target;
+    if (!clickedElement || !clickedElement.tagName) return;
 
-// For more information on Content Scripts,
-// See https://developer.chrome.com/extensions/content_scripts
-
-// Log `title` of current active web page
-const pageTitle = document.head.getElementsByTagName('title')[0].innerHTML;
-console.log(
-  `Page title is: '${pageTitle}' - evaluated by Chrome extension's 'contentScript.js' file`
-);
-
-// Communicate with background file by sending a message
-chrome.runtime.sendMessage(
-  {
-    type: 'GREETINGS',
-    payload: {
-      message: 'Hello, my name is Con. I am from ContentScript.',
-    },
-  },
-  (response) => {
-    if (chrome.runtime.lastError) {
-      console.error('Error:', chrome.runtime.lastError.message);
-    } else {
-      console.log('Response from background:', response.message);
-    }
-  }
-);
-
-// Listen for message
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'COUNT') {
-    console.log(`Current count is ${request.payload.count}`);
-  }
-
-  // Send an empty response
-  // See https://github.com/mozilla/webextension-polyfill/issues/130#issuecomment-531531890
-  sendResponse({});
-  return true;
-});
-
-(function () {
-  const originalMethods = {};
-
-  // Wrap methods to track their execution
-  ['log', 'warn', 'error'].forEach((method) => {
-    originalMethods[method] = console[method];
-    console[method] = function (...args) {
-      chrome.runtime.sendMessage({
-        type: 'LOG_METHOD',
-        payload: { methodName: `console.${method}` },
-      });
-      originalMethods[method].apply(console, args);
+    const elementInfo = {
+      tagName: clickedElement.tagName,
+      id: clickedElement.id || 'No ID',
+      className: clickedElement.className || 'No Class',
+      innerText: clickedElement.innerText ? clickedElement.innerText.trim().substring(0, 50) : 'No Text',
+      pageUrl: window.location.href,
     };
+
+    chrome.runtime.sendMessage({ type: 'LOG_CLICK', payload: elementInfo }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error sending click data:', chrome.runtime.lastError.message);
+      }
+    });
+  }
+
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === 'START_TRACKING_CLICKS') {
+      if (currentSessionId && currentSessionId !== request.sessionId) {
+        console.warn('Ignoring START_TRACKING_CLICKS for a different session:', request.sessionId);
+        return;
+      }
+
+      currentSessionId = request.sessionId;
+      console.log('Started tracking clicks for session:', currentSessionId);
+
+      trackingClicks = true;
+      document.removeEventListener('click', handleClick, true);
+      document.addEventListener('click', handleClick, true);
+
+      sendResponse({ message: 'Click tracking started.' });
+    } else if (request.type === 'STOP_TRACKING_CLICKS') {
+      if (currentSessionId !== request.sessionId) {
+        console.warn('Ignoring STOP_TRACKING_CLICKS for a different session:', request.sessionId);
+        return;
+      }
+
+      console.log('Stopped tracking clicks for session:', currentSessionId);
+
+      trackingClicks = false;
+      document.removeEventListener('click', handleClick, true);
+
+      sendResponse({ message: 'Click tracking stopped.' });
+    }
   });
 })();
+
