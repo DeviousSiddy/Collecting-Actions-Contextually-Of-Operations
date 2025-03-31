@@ -1,6 +1,6 @@
-# <img src="public/icons/icon_48.png" width="45" align="left"> Collect Actions Contextually On Odoo
+# <img src="public/icons/icon_48.png" width="45" align="left"> Collecting Actions Contextually On Operation
 
-A Chrome Extension designed to collect and manage actions contextually within Odoo.
+A Chrome Extension designed to collect and manage actions contextually within websites.
 
 ## Features
 
