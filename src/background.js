@@ -313,7 +313,7 @@ function injectContentScriptAndStartTracking(tabId) {
   });
 }
 
-// Function to add the overlay
+// Function to add the overlay for letting the page load
 function addOverlay() {
   // Check if the overlay already exists
   if (document.getElementById('tracking-overlay')) {
