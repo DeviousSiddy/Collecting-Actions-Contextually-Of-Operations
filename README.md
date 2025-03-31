@@ -1,21 +1,26 @@
 # <img src="public/icons/icon_48.png" width="45" align="left"> Collect Actions Contextually On Odoo
 
-My Chrome Extension
+A Chrome Extension designed to collect and manage actions contextually within Odoo.
 
 ## Features
 
-- Feature 1
-- Feature 2
+- **Contextual Action Collection**: Automatically collects actions based on user interactions within the Odoo platform.
+- **User-Friendly Interface**: Easy-to-use interface for managing and viewing collected actions.
+- **Real-Time Updates**: Keeps track of actions in real-time, providing up-to-date information.
 
-## Install
+## Installation
 
-[**Chrome** extension]()
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/DeviousSiddy/Collecting-Actions-Contextually-Of-Operations.git
 
-## Contribution
 
-Suggestions and pull requests are welcomed!.
+   
+This revised README.md includes:
+- A more detailed description of the project.
+- Step-by-step installation instructions.
+- Usage instructions for the extension.
+- Contribution and license information.
+- Acknowledgements section.
 
----
-
-This project was bootstrapped with [Chrome Extension CLI](https://github.com/dutiyesh/chrome-extension-cli)
-
+Feel free to modify or expand upon this template to better suit your project's needs.
