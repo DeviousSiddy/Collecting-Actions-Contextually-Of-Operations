@@ -15,12 +15,12 @@ html {
 }
 
 body {
-    width: 350px;
-    height: 300px;
+    width: auto; /* Adjust width dynamically based on content */
+    height: auto; /* Adjust height dynamically based on content */
+    padding: 10px; /* Optional padding for spacing */
 }
 
 .app {
-    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;

@@ -23,10 +23,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     inputText = request.payload.inputText;
     // Sanitize the inputText to create a valid folder name
-    sanitizedInputText = inputText
-      .replace(/[^a-zA-Z0-9-_ ]/g, '') // Remove invalid characters
-      .replace(/\s+/g, '_') // Replace spaces with underscores
-      .substring(0, 100); // Limit to 100 characters
+    sanitizedInputText = sanitizeInput(inputText);
     // Query the active tab to get its title and URL
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
@@ -119,10 +116,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const inputText = data.inputText || 'default';
 
       // Sanitize the inputText to create a valid folder name
-      const sanitizedInputText = inputText
-        .replace(/[^a-zA-Z0-9-_ ]/g, '') // Remove invalid characters
-        .replace(/\s+/g, '_') // Replace spaces with underscores
-        .substring(0, 100); // Limit to 100 characters
+      const sanitizedInputText = sanitizeInput(inputText);
 
       // Stop tracking clicks
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -183,15 +177,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         (downloadId) => {
           if (chrome.runtime.lastError) {
             console.error('Error creating clicks.csv:', chrome.runtime.lastError.message);
-            sendResponse({ message: 'Error creating clicks.csv' }); // Ensure response is sent
+            sendResponse({ message: 'Error creating clicks.csv' });
           } else {
             console.log('clicks.csv created with downloadId:', downloadId);
-            sendResponse({ message: 'Tracking stopped!' }); // Ensure response is sent
+            sendResponse({ message: 'Tracking stopped!' });
           }
-
+    
           console.log('Saving CSV with clickData:', clickData); // Debugging: Check the array before clearing
           clickData = [];
-
+    
           // Clear the "Started" state in storage
           chrome.storage.local.set({ tracking: false }, () => {
             console.log('Tracking state set to false.');
@@ -204,7 +198,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.type === 'LOG_CLICK') {
     console.log('LOG_CLICK message received:', request.payload);
 
-    // Check if the new click is identical to the last logged click (ignoring sequence number)
     const isDuplicate =
       lastLoggedClick &&
       lastLoggedClick.tagName === request.payload.tagName &&
@@ -219,23 +212,87 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
     }
 
-    // Log the new click
     const sequenceNumber = clickData.length + 1;
-    clickData.push({ sequenceNumber, ...request.payload });
+    clickData.push({
+      sequenceNumber,
+      action: 'click', // Specify the action type
+      ...request.payload
+    });
     lastLoggedClick = request.payload; // Update the last logged click
     console.log('Logged click:', request.payload);
     console.log('Current clickData:', clickData);
 
     sendResponse({ message: 'Click logged successfully.' });
     return true;
+  } else if (request.type === 'LOG_BUTTON_CLICK') {
+    console.log('Button click logged:', request.payload);
+
+    const sequenceNumber = clickData.length + 1;
+    clickData.push({
+      sequenceNumber,
+      action: 'button_click',
+      ...request.payload,
+    });
+
+    sendResponse({ message: 'Button click logged successfully.' });
+    return true;
+  } else if (request.type === 'LOG_METHOD_CALL') {
+    console.log('Method call logged:', request.payload);
+
+    const sequenceNumber = clickData.length + 1;
+    clickData.push({
+      sequenceNumber,
+      action: 'method_call',
+      ...request.payload,
+    });
+
+    sendResponse({ message: 'Method call logged successfully.' });
+    return true;
+  } else if (request.type === 'LOG_COPY') {
+    console.log('Copy event logged:', request.payload);
+
+    const sequenceNumber = clickData.length + 1;
+    clickData.push({
+      sequenceNumber,
+      action: 'copy',
+      innerText: request.payload.text,
+      pageUrl: request.payload.pageUrl,
+    });
+
+    sendResponse({ message: 'Copy event logged successfully.' });
+    return true;
+  } else if (request.type === 'LOG_PASTE') {
+    console.log('Paste event logged:', request.payload);
+
+    const sequenceNumber = clickData.length + 1;
+    clickData.push({
+      sequenceNumber,
+      action: 'paste',
+      innerText: request.payload.text,
+      pageUrl: request.payload.pageUrl,
+    });
+
+    sendResponse({ message: 'Paste event logged successfully.' });
+    return true;
   }
 });
 
 // Helper function to generate CSV content
 function generateCSV(data) {
-  const headers = ['Sequence', 'Tag Name', 'ID', 'Class Name', 'Inner Text', 'Page URL'];
+  const headers = ['Sequence', 'Action', 'Tag Name', 'ID', 'Class Name', 'Inner Text', 'Method Name', 'Model Name', 'Parameters', 'Page URL'];
   const rows = data.map((item) =>
-    [item.sequenceNumber, item.tagName, item.id, item.className, item.innerText, item.pageUrl].join(',')
+    [
+      item.sequenceNumber,
+      item.action || 'click', // Default to 'click' if no action is specified
+      item.tagName || '',
+      item.id || '',
+      item.className || '',
+      item.innerText || '',
+      item.methodName || '',
+      item.modelName || '',
+      JSON.stringify(item.parameters || []),
+      item.pageUrl || ''
+    ].join(',')
   );
   const csvContent = [headers.join(','), ...rows].join('\n');
   console.log('Generated CSV content:', csvContent); // Debugging: Check the CSV content
@@ -428,4 +485,11 @@ function sendStopMessage(tabId) {
       console.warn('No response received from content scripts.');
     }
   });
+}
+// Helper function to sanitize input text
+function sanitizeInput(input) {
+  return input
+    .replace(/[^a-zA-Z0-9-_ ]/g, '') // Remove invalid characters
+    .replace(/\s+/g, '_') // Replace spaces with underscores
+    .substring(0, 100); // Limit to 100 characters
 }
