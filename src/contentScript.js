@@ -2,6 +2,29 @@
   let currentSessionId = null;
   let trackingClicks = false;
 
+  // Helper function to calculate XPath of an element
+  function getXPath(element) {
+    if (element.id) {
+      return `//*[@id="${element.id}"]`;
+    }
+    if (element === document.body) {
+      return '/html/body';
+    }
+
+    let index = 0;
+    const siblings = element.parentNode ? element.parentNode.childNodes : [];
+    for (let i = 0; i < siblings.length; i++) {
+      const sibling = siblings[i];
+      if (sibling === element) {
+        return `${getXPath(element.parentNode)}/${element.tagName.toLowerCase()}[${index + 1}]`;
+      }
+      if (sibling.nodeType === 1 && sibling.tagName === element.tagName) {
+        index++;
+      }
+    }
+    return '';
+  }
+
   // Function to handle button clicks
   function handleClick(event) {
     if (!trackingClicks) return;
@@ -9,11 +32,49 @@
     const clickedElement = event.target;
     if (!clickedElement || !clickedElement.tagName) return;
 
+    // Get the innerText of the clicked element
+    let innerText = clickedElement.innerText ? clickedElement.innerText.trim().substring(0, 50) : 'No Text';
+
+    // Check for additional hint text (e.g., placeholder, title, aria-label)
+    const hintText = clickedElement.getAttribute('placeholder') || // Placeholder text
+                     clickedElement.getAttribute('title') ||       // Title attribute
+                     clickedElement.getAttribute('aria-label') ||  // ARIA label
+                     '';
+
+    // Concatenate the hint text with the innerText
+    if (hintText) {
+      innerText += ` (Hint: ${hintText})`;
+    }
+
+    // Extract the field name or aria-label
+    let fieldName = clickedElement.getAttribute('aria-label') || // Use aria-label of the clicked element
+                    clickedElement.getAttribute('name') ||       // Fallback to name attribute
+                    clickedElement.getAttribute('data-name') ||  // Fallback to data-name attribute
+                    clickedElement.getAttribute('data-field') || // Fallback to data-field attribute
+                    clickedElement.id ||                         // Fallback to the element's ID
+                    'No ID';
+
+    // If no aria-label is found on the clicked element, traverse up the DOM tree to find the nearest parent with an aria-label
+    if (!clickedElement.getAttribute('aria-label')) {
+      let parent = clickedElement.parentElement;
+      while (parent) {
+        if (parent.getAttribute('aria-label')) {
+          fieldName = parent.getAttribute('aria-label');
+          break;
+        }
+        parent = parent.parentElement;
+      }
+    }
+
+    // Calculate XPath
+    const xpath = getXPath(clickedElement);
+
     const elementInfo = {
       tagName: clickedElement.tagName,
-      id: clickedElement.id || 'No ID',
+      id: fieldName, // Use the field name or aria-label as the ID
       className: clickedElement.className || 'No Class',
-      innerText: clickedElement.innerText ? clickedElement.innerText.trim().substring(0, 50) : 'No Text',
+      innerText: innerText, // Updated innerText with hint text
+      xpath: xpath, // Add XPath
       pageUrl: window.location.href,
     };
 
@@ -154,6 +215,30 @@
       // Intercept the next method call (example for Odoo)
       interceptNextMethod();
     }
+  });
+
+  // Inject the script into the webpage's context
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('injectedScript.js'); // Use the runtime URL to load the script
+  script.onload = function () {
+    this.remove(); // Remove the script tag after execution
+  };
+  (document.head || document.documentElement).appendChild(script);
+
+  // Listen for messages from the injected script
+  window.addEventListener('message', (event) => {
+    if (event.source !== window || !event.data || event.data.type !== 'METHOD_CALL') {
+      return;
+    }
+
+    const methodDetails = event.data.payload;
+    console.log('Received method call details from injected script:', methodDetails);
+
+    // Send the method details to the background script
+    chrome.runtime.sendMessage({
+      type: 'LOG_METHOD_CALL',
+      payload: methodDetails,
+    });
   });
 })();
 

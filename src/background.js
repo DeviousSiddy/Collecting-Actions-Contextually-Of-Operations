@@ -204,7 +204,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       lastLoggedClick.id === request.payload.id &&
       lastLoggedClick.className === request.payload.className &&
       lastLoggedClick.innerText === request.payload.innerText &&
-      lastLoggedClick.pageUrl === request.payload.pageUrl;
+      lastLoggedClick.pageUrl === request.payload.pageUrl &&
+      lastLoggedClick.xpath === request.payload.xpath;
 
     if (isDuplicate) {
       console.warn('Duplicate click detected. Skipping logging.');
@@ -216,7 +217,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     clickData.push({
       sequenceNumber,
       action: 'click', // Specify the action type
-      ...request.payload
+      ...request.payload,
     });
     lastLoggedClick = request.payload; // Update the last logged click
     console.log('Logged click:', request.payload);
@@ -243,7 +244,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     clickData.push({
       sequenceNumber,
       action: 'method_call',
-      ...request.payload,
+      methodName: request.payload.methodName,
+      modelName: request.payload.modelName,
+      parameters: request.payload.parameters,
     });
 
     sendResponse({ message: 'Method call logged successfully.' });
@@ -279,21 +282,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Helper function to generate CSV content
 function generateCSV(data) {
-  const headers = ['Sequence', 'Action', 'Tag Name', 'ID', 'Class Name', 'Inner Text', 'Method Name', 'Model Name', 'Parameters', 'Page URL'];
+  const headers = ['Sequence', 'Action', 'Tag Name', 'ID', 'Class Name', 'Inner Text', 'XPath', 'Method Name', 'Model Name', 'Parameters', 'Page URL'];
+  
+  // Helper function to escape fields for CSV
+  const escapeCSVField = (field) => {
+    if (typeof field === 'string') {
+      // Escape double quotes by doubling them and wrap the field in double quotes
+      return `"${field.replace(/"/g, '""')}"`;
+    }
+    return field || ''; // Return the field or an empty string if it's null/undefined
+  };
+
   const rows = data.map((item) =>
     [
       item.sequenceNumber,
       item.action || 'click', // Default to 'click' if no action is specified
-      item.tagName || '',
-      item.id || '',
-      item.className || '',
-      item.innerText || '',
-      item.methodName || '',
-      item.modelName || '',
-      JSON.stringify(item.parameters || []),
-      item.pageUrl || ''
+      escapeCSVField(item.tagName || ''),
+      escapeCSVField(item.id || ''),
+      escapeCSVField(item.className || ''),
+      escapeCSVField(item.innerText || ''),
+      escapeCSVField(item.xpath || ''),
+      escapeCSVField(item.methodName || ''),
+      escapeCSVField(item.modelName || ''),
+      escapeCSVField(JSON.stringify(item.parameters || [])),
+      escapeCSVField(item.pageUrl || ''),
     ].join(',')
   );
+
   const csvContent = [headers.join(','), ...rows].join('\n');
   console.log('Generated CSV content:', csvContent); // Debugging: Check the CSV content
   return csvContent;

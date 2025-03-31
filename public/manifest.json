@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Collect Actions Contextually On Odoo",
+  "name": "Collecting Actions Contextually On Operations",
   "$schema": "https://json.schemastore.org/chrome-manifest.json",
   "version": "0.3.0",
   "description": "Tracks clicks, copy, and paste actions on websites and logs them to a CSV file.",

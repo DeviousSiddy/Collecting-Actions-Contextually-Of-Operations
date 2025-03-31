@@ -15,9 +15,9 @@ html {
 }
 
 body {
-    width: auto; /* Adjust width dynamically based on content */
-    height: auto; /* Adjust height dynamically based on content */
-    padding: 10px; /* Optional padding for spacing */
+    width: 400px; /* Adjust width dynamically based on content */
+    height: 25px; /* Adjust height dynamically based on content */
+    padding: 1px; /* Optional padding for spacing */
 }
 
 .app {
