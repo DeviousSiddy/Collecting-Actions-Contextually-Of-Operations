@@ -425,7 +425,7 @@ function sendStopMessage(tabId) {
     } else if (response && response.message) {
       console.log(response.message);
     } else {
-      console.warn('No response received from content script.');
+      console.warn('No response received from content scripts.');
     }
   });
 }
