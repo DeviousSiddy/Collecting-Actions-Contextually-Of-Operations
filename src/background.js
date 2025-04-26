@@ -87,112 +87,56 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Keep the message channel open for asynchronous responses
   } else if (request.type === 'STOP') {
     console.log('STOP request received.');
-    // Stop tracking clicks
-    chrome.storage.local.get('sessionId', (data) => {
-      const sessionId = data.sessionId;
-  
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs.length === 0) {
-          console.error('No active tab found.');
-          return;
-        }
-  
-        const activeTab = tabs[0];
-        chrome.tabs.sendMessage(activeTab.id, { type: 'STOP_TRACKING_CLICKS', sessionId }, (response) => {
-          if (chrome.runtime.lastError) {
-            console.error('Error sending STOP_TRACKING_CLICKS message:', chrome.runtime.lastError.message);
-          } else if (response && response.message) {
-            console.log(response.message);
-          }
-        });
-      });
-  
-      chrome.storage.local.set({ tracking: false, sessionId: null }, () => {
-        console.log('Tracking state set to false and session ID cleared.');
-      });
-    });
-    // Retrieve the inputText from storage
-    chrome.storage.local.get('inputText', (data) => {
-      const inputText = data.inputText || 'default';
 
-      // Sanitize the inputText to create a valid folder name
-      const sanitizedInputText = sanitizeInput(inputText);
+    // Prepare metadata
+    const metadata = {
+      websiteName: 'Unknown Title',
+      url: 'Unknown URL',
+      inputText: inputText,
+      browserName: navigator.userAgent,
+      timestamp: new Date().toISOString(),
+    };
 
-      // Stop tracking clicks
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs.length === 0) {
-          console.error('No active tab found.');
-          return;
-        }
-
-        const activeTab = tabs[0];
-        const url = activeTab.url || '';
-        if (url.startsWith('chrome://') || url.startsWith('chrome-extension://')) {
-          console.warn('Cannot interact with restricted pages:', url);
-          return;
-        }
-
-        // Check if the content script is active
-        chrome.scripting.executeScript(
-          {
-            target: { tabId: activeTab.id },
-            func: () => !!window.chrome.runtime, // Check if the content script is active
-          },
-          (results) => {
-            if (chrome.runtime.lastError || !results || !results[0].result) {
-              console.warn('Content script not active. Re-injecting...');
-              chrome.scripting.executeScript(
-                {
-                  target: { tabId: activeTab.id },
-                  files: ['contentScript.js'],
-                },
-                () => {
-                  if (chrome.runtime.lastError) {
-                    console.error('Error injecting content script:', chrome.runtime.lastError.message);
-                  } else {
-                    console.log('Content script re-injected.');
-                    sendStopMessage(activeTab.id);
-                  }
-                }
-              );
-            } else {
-              sendStopMessage(activeTab.id);
-            }
-          }
-        );
-      });
-
-      // Save click data to a CSV file
-      const csvContent = generateCSV(clickData);
-      const csvDataUrl = `data:text/csv;charset=utf-8,${encodeURIComponent(csvContent)}`;
-    const timeCode = new Date().toISOString().replace(/:/g, '').replace(/\..+/, '').replace(/-/g, '');
-
-    chrome.downloads.download(
-      {
-        url: jsonDataUrl,
-        filename: `CACOO/${sanitizedInputText}/clicks-${timeCode}.json`,
-        conflictAction: 'overwrite',
-        saveAs: false,
-      },
-      (downloadId) => {
-        if (chrome.runtime.lastError) {
-          console.error('Error creating clicks.json:', chrome.runtime.lastError.message);
-          sendResponse({ message: 'Error creating clicks.json' });
-        } else {
-          console.log('clicks.json created with downloadId:', downloadId);
-          sendResponse({ message: 'Tracking stopped!' });
-        }
-
-        console.log('Saving JSON with clickData:', clickData); // Debugging: Check the array before clearing
-        clickData = [];
-
-        // Clear the "Started" state in storage
-        chrome.storage.local.set({ tracking: false }, () => {
-          console.log('Tracking state set to false.');
-        });
+    // Query the active tab to get its title and URL
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const activeTab = tabs[0];
+      if (activeTab) {
+        metadata.websiteName = activeTab.title || 'Unknown Title';
+        metadata.url = activeTab.url || 'Unknown URL';
       }
-    );
-});
+
+      // Generate JSON content with metadata and click data
+      const jsonContent = generateJSON(clickData, metadata);
+      const jsonDataUrl = `data:application/json;charset=utf-8,${encodeURIComponent(jsonContent)}`;
+      const timeCode = new Date().toISOString().replace(/:/g, '').replace(/\..+/, '').replace(/-/g, '');
+
+      // Save the JSON file
+      chrome.downloads.download(
+        {
+          url: jsonDataUrl,
+          filename: `CACOO/${sanitizedInputText}/clicks-${timeCode}.json`,
+          conflictAction: 'overwrite',
+          saveAs: false,
+        },
+        (downloadId) => {
+          if (chrome.runtime.lastError) {
+            console.error('Error creating clicks.json:', chrome.runtime.lastError.message);
+            sendResponse({ message: 'Error creating clicks.json' });
+          } else {
+            console.log('clicks.json created with downloadId:', downloadId);
+            sendResponse({ message: 'Tracking stopped!' });
+          }
+
+          console.log('Saving JSON with clickData:', clickData); // Debugging: Check the array before clearing
+          clickData = [];
+
+          // Clear the "Started" state in storage
+          chrome.storage.local.set({ tracking: false }, () => {
+            console.log('Tracking state set to false.');
+          });
+        }
+      );
+    });
 
     return true; // Keep the message channel open for asynchronous responses
   } else if (request.type === 'LOG_CLICK') {
@@ -315,10 +259,28 @@ function generateCSV(data) {
 }
 
 // Helper function to generate JSON content
-function generateJSON(data) {
-  // Convert the data array to a JSON string with indentation for readability
-  const jsonContent = JSON.stringify(data, null, 2);
-  console.log('Generated JSON content:', jsonContent); // Debugging: Check the JSON content
+function generateJSON(data, metadata) {
+  // Combine metadata and click data into a single JSON object
+  const jsonData = {
+    metadata: metadata, // Add metadata as the header
+    clicks: data.map((item) => ({
+      sequenceNumber: item.sequenceNumber || null,
+      action: item.action || 'click', // Default to 'click' if no action is specified
+      tagName: item.tagName || '',
+      id: item.id || '',
+      className: item.className || '',
+      innerText: item.innerText || '',
+      xpath: item.xpath || '',
+      methodName: item.methodName || '',
+      modelName: item.modelName || '',
+      parameters: item.parameters || [],
+      pageUrl: item.pageUrl || '',
+    })),
+  };
+
+  // Convert the combined object to a JSON string with indentation for readability
+  const jsonContent = JSON.stringify(jsonData, null, 2);
+  console.log('Generated JSON content with metadata:', jsonContent); // Debugging: Check the JSON content
   return jsonContent;
 }
 
