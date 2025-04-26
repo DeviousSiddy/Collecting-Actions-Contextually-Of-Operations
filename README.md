@@ -8,13 +8,15 @@ A Chrome Extension designed to collect and manage actions contextually within we
 - **User-Friendly Interface**: Easy-to-use interface for managing and viewing collected actions.
 - **Real-Time Updates**: Keeps track of actions in real-time, providing up-to-date information.
 - **Copy and Paste Tracking**: Tracks copy and paste actions performed on the website.
-- **CSV Export**: Exports collected data (clicks, copy, and paste actions) to a CSV file for further analysis.
+- **JSON Export**: Exports collected data (clicks, copy, and paste actions) to a JSON file for further analysis.
+- **Metadata Inclusion**: Includes metadata such as website name, URL, browser information, and timestamp in the exported JSON file.
 
 ## Installation
 
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/DeviousSiddy/Collecting-Actions-Contextually-Of-Operations.git
+   ```
 
 2. **Install Dependencies**:
    ```bash
@@ -41,10 +43,12 @@ A Chrome Extension designed to collect and manage actions contextually within we
    - Perform actions such as clicking buttons, copying text, or pasting text on the website. The extension will log these actions in real-time.
 
 3. **Stop Tracking**:
-   - Click "Stop" in the popup to end tracking. The collected data will be saved as a CSV file in the `Downloads` folder.
+   - Click "Stop" in the popup to end tracking. The collected data will be saved as a JSON file in the `Downloads` folder.
 
 4. **View Collected Data**:
-   - The CSV file will include details such as the action type (`click`, `copy`, `paste`), the element clicked, copied text, pasted text, and the page URL.
+   - The JSON file will include:
+     - **Metadata**: Website name, URL, browser information, timestamp, and user-provided input text.
+     - **Click Data**: Details such as the action type (`click`, `copy`, `paste`), the element clicked, copied text, pasted text, and the page URL.
 
 ## Contribution
 
