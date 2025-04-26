@@ -165,34 +165,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // Save click data to a CSV file
       const csvContent = generateCSV(clickData);
       const csvDataUrl = `data:text/csv;charset=utf-8,${encodeURIComponent(csvContent)}`;
-      const timeCode = new Date().toISOString().replace(/:/g, '').replace(/\..+/, '').replace(/-/g, '');
+    const timeCode = new Date().toISOString().replace(/:/g, '').replace(/\..+/, '').replace(/-/g, '');
 
-      chrome.downloads.download(
-        {
-          url: csvDataUrl,
-          filename: `CACOO/${sanitizedInputText}/clicks-${timeCode}.csv`,
-          conflictAction: 'overwrite',
-          saveAs: false,
-        },
-        (downloadId) => {
-          if (chrome.runtime.lastError) {
-            console.error('Error creating clicks.csv:', chrome.runtime.lastError.message);
-            sendResponse({ message: 'Error creating clicks.csv' });
-          } else {
-            console.log('clicks.csv created with downloadId:', downloadId);
-            sendResponse({ message: 'Tracking stopped!' });
-          }
-    
-          console.log('Saving CSV with clickData:', clickData); // Debugging: Check the array before clearing
-          clickData = [];
-    
-          // Clear the "Started" state in storage
-          chrome.storage.local.set({ tracking: false }, () => {
-            console.log('Tracking state set to false.');
-          });
+    chrome.downloads.download(
+      {
+        url: jsonDataUrl,
+        filename: `CACOO/${sanitizedInputText}/clicks-${timeCode}.json`,
+        conflictAction: 'overwrite',
+        saveAs: false,
+      },
+      (downloadId) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error creating clicks.json:', chrome.runtime.lastError.message);
+          sendResponse({ message: 'Error creating clicks.json' });
+        } else {
+          console.log('clicks.json created with downloadId:', downloadId);
+          sendResponse({ message: 'Tracking stopped!' });
         }
-      );
-    });
+
+        console.log('Saving JSON with clickData:', clickData); // Debugging: Check the array before clearing
+        clickData = [];
+
+        // Clear the "Started" state in storage
+        chrome.storage.local.set({ tracking: false }, () => {
+          console.log('Tracking state set to false.');
+        });
+      }
+    );
+});
 
     return true; // Keep the message channel open for asynchronous responses
   } else if (request.type === 'LOG_CLICK') {
@@ -312,6 +312,14 @@ function generateCSV(data) {
   const csvContent = [headers.join(','), ...rows].join('\n');
   console.log('Generated CSV content:', csvContent); // Debugging: Check the CSV content
   return csvContent;
+}
+
+// Helper function to generate JSON content
+function generateJSON(data) {
+  // Convert the data array to a JSON string with indentation for readability
+  const jsonContent = JSON.stringify(data, null, 2);
+  console.log('Generated JSON content:', jsonContent); // Debugging: Check the JSON content
+  return jsonContent;
 }
 
 // Helper function to generate a unique session ID
