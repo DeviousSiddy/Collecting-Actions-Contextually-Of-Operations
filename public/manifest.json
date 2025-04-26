@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Collecting Actions Contextually On Operations",
   "$schema": "https://json.schemastore.org/chrome-manifest.json",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "Tracks clicks, copy, and paste actions on websites and logs them to a CSV file.",
   "icons": {
     "16": "icons/icon_16.png",
